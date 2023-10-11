@@ -1,6 +1,10 @@
 #![warn(missing_docs)]
 
 /*!
+## Note
+This crate has been republished because of popular demand to publish the fixed fork as a crate.
+However, I can't make any guarantees about the safety of this crate, and I won't necessarilly be able to actively maintain it.
+
 # An owning reference.
 
 This crate provides the _owning reference_ types `OwningRef` and `OwningRefMut`
