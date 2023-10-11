@@ -1,10 +1,10 @@
-[![Build Status](https://travis-ci.org/Kimundi/owning-ref-rs.svg)](https://travis-ci.org/Kimundi/owning-ref-rs)
-[![Crate](https://img.shields.io/crates/v/owning_ref.svg)](https://crates.io/crates/owning_ref)
-[![Docs](https://docs.rs/owning_ref/badge.svg)](https://docs.rs/owning_ref)
+## Note
+This crate has been republished because of popular demand to publish the fixed fork as a crate.
+However, I can't make any guarantees about the safety of this crate, and I won't necessarilly be able to actively maintain it.
 
-owning-ref-rs
+
+safer_owning_ref
 ==============
-
 A library for creating references that carry their owner with them.
 
 This can sometimes be useful because Rust borrowing rules normally prevent
@@ -35,10 +35,11 @@ fn return_owned_and_referenced() -> OwningRef<Vec<u8>, [u8]> {
 To get started, add the following to `Cargo.toml`.
 
 ```toml
-owning_ref = "0.4.1"
+safer_owning_ref = "0.5.0"
 ```
+(Note: The package's name is `safer_owning_ref`, but the crate name is still `owning_ref`).
 
-...and see the [docs](http://kimundi.github.io/owning-ref-rs/owning_ref/index.html) for how to use it.
+...and see the [docs](https://docs.rs/safer_owning_ref/latest/) for how to use it.
 
 
 ## Example
