@@ -1,15 +1,17 @@
 [package]
-name = "owning_ref"
-version = "0.4.1"
-authors = ["Marvin Löbel <loebel.marvin@gmail.com>"]
+name = "safer_owning_ref"
+version = "0.5.0"
+authors = ["Marvin Löbel <loebel.marvin@gmail.com>", "Noam Ta Shma noam.tashma@gmail.com"]
 license = "MIT"
 
 description = "A library for creating references that carry their owner with them."
 readme = "README.md"
-documentation = "http://kimundi.github.io/owning-ref-rs/owning_ref/index.html"
 
-repository = "https://github.com/Kimundi/owning-ref-rs"
+repository = "https://github.com/noamtashma/owning-ref-rs"
 keywords = ["reference", "sibling", "field", "owning"]
+
+[lib]
+name = "owning_ref"
 
 [dependencies]
 stable_deref_trait = "1.0.0"
