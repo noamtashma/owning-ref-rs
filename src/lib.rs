@@ -459,7 +459,29 @@ impl<'t, O, T: ?Sized> OwningRef<'t, O, T> {
     //     println!("{:?}", ow_ref);
     //     drop(box_i);
     // }
-    
+
+    /// Tries to convert `self` into a new owning reference that points
+    /// at something reachable from the previous one.
+    ///
+    /// This can be a reference to a field of `U`, something reachable from a field of
+    /// `U`, or even something unrelated with a `'static` lifetime.
+    ///
+    /// Unlike `try_map`, `try_map_or_keep` returns the original `OwningRef`
+    /// on error.
+    pub fn try_map_or_keep<F, U: ?Sized>(self, f: F) -> Result<OwningRef<'t, O, U>, Self>
+        where O: StableAddress,
+              F: FnOnce(&T) -> Option<&U>
+    {
+        if let Some(reference) = f(&self) {
+            Ok(OwningRef {
+                reference,
+                owner: self.owner,
+                marker: PhantomData,
+            })
+        } else {
+            Err(self)
+        }
+    }
 
     /// Old version of `try_map_with_owner`, now recognized as unsafe.
     #[deprecated(since = "0.5.0", note = "unsafe function: please use try_map_with_owner instead")]
@@ -506,6 +528,29 @@ impl<'t, O, T: ?Sized> OwningRef<'t, O, T> {
             owner: self.owner,
             marker: PhantomData,
         })
+    }
+
+    /// Tries to convert `self` into a new owning reference that points
+    /// at something reachable from the previous one.
+    ///
+    /// This can be a reference to a field of `U`, something reachable from a field of
+    /// `U`, or even something unrelated with a `'static` lifetime.
+    ///
+    /// Unlike `try_map_with_owner`, `try_map_or_keep` returns the original
+    /// `OwningRef` on error.
+    pub fn try_map_with_owner_or_keep<F, U: ?Sized>(self, f: F) -> Result<OwningRef<'t, O, U>, Self>
+        where O: StableAddress + Deref,
+              F: for<'a> FnOnce(&'a O::Target, &'a T) -> Option<&'a U>
+    {
+        if let Some(reference) = f(&self.owner, &self) {
+            Ok(OwningRef {
+                reference,
+                owner: self.owner,
+                marker: PhantomData,
+            })
+        } else {
+            Err(self)
+        }
     }
 
     /// Converts `self` into a new owning reference with a different owner type.
@@ -653,7 +698,6 @@ impl<'t, O, T: ?Sized> OwningRefMut<'t, O, T> {
     ///     assert_eq!(*owning_ref, 3);
     /// }
     /// ```
-    /// 
     #[deprecated(since = "0.5.0", note = "unsafe function. can create aliased references")]
     pub unsafe fn map<F, U: ?Sized>(mut self, f: F) -> OwningRef<'t, O, U>
         where O: StableAddress,
@@ -721,7 +765,6 @@ impl<'t, O, T: ?Sized> OwningRefMut<'t, O, T> {
     ///     assert_eq!(*owning_ref.unwrap(), 3);
     /// }
     /// ```
-    /// 
     #[deprecated(since = "0.5.0", note = "unsafe function. can create aliased references")]
     pub unsafe fn try_map<F, U: ?Sized, E>(mut self, f: F) -> Result<OwningRef<'t, O, U>, E>
         where O: StableAddress,
@@ -765,6 +808,29 @@ impl<'t, O, T: ?Sized> OwningRefMut<'t, O, T> {
             owner: self.owner,
             marker: PhantomData,
         })
+    }
+
+    /// Tries to convert `self` into a new _mutable_ owning reference that points
+    /// at something reachable from the previous one.
+    ///
+    /// This can be a reference to a field of `U`, something reachable from a field of
+    /// `U`, or even something unrelated with a `'static` lifetime.
+    ///
+    /// Unlike `try_map_mut`, `try_map_or_keep` returns the original `OwningRef`
+    /// on error.
+    pub fn try_map_mut_or_keep<F, U: ?Sized>(mut self, f: F) -> Result<OwningRefMut<'t, O, U>, Self>
+        where O: StableAddress,
+              F: FnOnce(&mut T) -> Option<&mut U>
+    {
+        if let Some(reference) = f(&mut self) {
+            Ok(OwningRefMut {
+                reference,
+                owner: self.owner,
+                marker: PhantomData,
+            })
+        } else {
+            Err(self)
+        }
     }
 
     /// Converts `self` into a new owning reference with a different owner type.
