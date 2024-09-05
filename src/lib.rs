@@ -1,5 +1,7 @@
 #![warn(missing_docs)]
 
+#![cfg_attr(not(feature = "std"), no_std)]
+
 /*!
 ## Note
 This crate has been republished because of popular demand to publish the fixed fork as a crate.
@@ -247,9 +249,16 @@ fn main() {
 ```
 */
 
+#[cfg(all(not(feature = "std"), test))]
+extern crate std;
+
 extern crate stable_deref_trait;
 pub use stable_deref_trait::{StableDeref as StableAddress, CloneStableDeref as CloneStableAddress};
+
+#[cfg(feature = "std")]
 use std::marker::PhantomData;
+#[cfg(not(feature = "std"))]
+use core::marker::PhantomData;
 
 /// An owning reference.
 ///
@@ -861,7 +870,10 @@ impl<'t, O, T: ?Sized> OwningRefMut<'t, O, T> {
 // OwningHandle
 /////////////////////////////////////////////////////////////////////////////
 
+#[cfg(feature = "std")]
 use std::ops::{Deref, DerefMut};
+#[cfg(not(feature = "std"))]
+use core::ops::{Deref, DerefMut};
 
 /// `OwningHandle` is a complement to `OwningRef`. Where `OwningRef` allows
 /// consumers to pass around an owned object and a dependent reference,
@@ -1004,12 +1016,24 @@ impl<O, H> OwningHandle<O, H>
 // std traits
 /////////////////////////////////////////////////////////////////////////////
 
-use std::convert::From;
-use std::fmt::{self, Debug};
-use std::marker::{Send, Sync};
-use std::cmp::{Eq, PartialEq, Ord, PartialOrd, Ordering};
-use std::hash::{Hash, Hasher};
-use std::borrow::{Borrow, BorrowMut};
+#[cfg(feature = "std")]
+use std::{
+    borrow::{Borrow, BorrowMut},
+    cmp::{Eq, PartialEq, Ord, PartialOrd, Ordering},
+    convert::From,
+    fmt::{self, Debug},
+    hash::{Hash, Hasher},
+    marker::{Send, Sync},
+};
+#[cfg(not(feature = "std"))]
+use core::{
+    borrow::{Borrow, BorrowMut},
+    cmp::{Eq, PartialEq, Ord, PartialOrd, Ordering},
+    convert::From,
+    fmt::{self, Debug},
+    hash::{Hash, Hasher},
+    marker::{Send, Sync},
+};
 
 impl<'t, O, T: ?Sized> Deref for OwningRef<'t, O, T> {
     type Target = T;
@@ -1138,14 +1162,14 @@ unsafe impl<'t, O, T: ?Sized> CloneStableAddress for OwningRef<'t, O, T>
     where O: CloneStableAddress {}
 
 unsafe impl<'t, O, T: ?Sized> Send for OwningRef<'t, O, T>
-    where O: Send, for<'a> (&'a T): Send {}
+    where O: Send, for<'a> &'a T: Send {}
 unsafe impl<'t, O, T: ?Sized> Sync for OwningRef<'t, O, T>
-    where O: Sync, for<'a> (&'a T): Sync {}
+    where O: Sync, for<'a> &'a T: Sync {}
 
 unsafe impl<'t, O, T: ?Sized> Send for OwningRefMut<'t, O, T>
-    where O: Send, for<'a> (&'a mut T): Send {}
+    where O: Send, for<'a> &'a mut T: Send {}
 unsafe impl<'t, O, T: ?Sized> Sync for OwningRefMut<'t, O, T>
-    where O: Sync, for<'a> (&'a mut T): Sync {}
+    where O: Sync, for<'a> &'a mut T: Sync {}
 
 impl Debug for dyn Erased {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
@@ -1209,11 +1233,17 @@ impl<'t, O, T: ?Sized> Hash for OwningRefMut<'t, O, T> where T: Hash {
 // std types integration and convenience type defs
 /////////////////////////////////////////////////////////////////////////////
 
-use std::boxed::Box;
-use std::rc::Rc;
-use std::sync::Arc;
-use std::sync::{MutexGuard, RwLockReadGuard, RwLockWriteGuard};
+extern crate alloc;
+
+use alloc::{boxed::Box, rc::Rc, string::String, sync::Arc, vec::Vec};
+
+#[cfg(feature = "std")]
 use std::cell::{Ref, RefCell, RefMut};
+#[cfg(not(feature = "std"))]
+use core::cell::{Ref, RefCell, RefMut};
+
+#[cfg(feature = "std")]
+use std::sync::{MutexGuard, RwLockReadGuard, RwLockWriteGuard};
 
 impl<T: 'static> ToHandle for RefCell<T> {
     type Handle = Ref<'static, T>;
@@ -1245,10 +1275,14 @@ pub type ArcRef<'u, T, U = T> = OwningRef<'u, Arc<T>, U>;
 pub type RefRef<'a, T, U = T> = OwningRef<'a, Ref<'a, T>, U>;
 /// Typedef of a owning reference that uses a `RefMut` as the owner.
 pub type RefMutRef<'a, T, U = T> = OwningRef<'a, RefMut<'a, T>, U>;
+
+#[cfg(feature = "std")]
 /// Typedef of a owning reference that uses a `MutexGuard` as the owner.
 pub type MutexGuardRef<'a, T, U = T> = OwningRef<'a, MutexGuard<'a, T>, U>;
+#[cfg(feature = "std")]
 /// Typedef of a owning reference that uses a `RwLockReadGuard` as the owner.
 pub type RwLockReadGuardRef<'a, T, U = T> = OwningRef<'a, RwLockReadGuard<'a, T>, U>;
+#[cfg(feature = "std")]
 /// Typedef of a owning reference that uses a `RwLockWriteGuard` as the owner.
 pub type RwLockWriteGuardRef<'a, T, U = T> = OwningRef<'a, RwLockWriteGuard<'a, T>, U>;
 
@@ -1261,8 +1295,10 @@ pub type StringRefMut<'u, > = OwningRefMut<'u, String, str>;
 
 /// Typedef of a mutable owning reference that uses a `RefMut` as the owner.
 pub type RefMutRefMut<'a, T, U = T> = OwningRefMut<'a, RefMut<'a, T>, U>;
+#[cfg(feature = "std")]
 /// Typedef of a mutable owning reference that uses a `MutexGuard` as the owner.
 pub type MutexGuardRefMut<'a, T, U = T> = OwningRefMut<'a, MutexGuard<'a, T>, U>;
+#[cfg(feature = "std")]
 /// Typedef of a mutable owning reference that uses a `RwLockWriteGuard` as the owner.
 pub type RwLockWriteGuardRefMut<'a, T, U = T> = OwningRefMut<'a, RwLockWriteGuard<'a, T>, U>;
 
@@ -1300,11 +1336,21 @@ mod tests {
     mod owning_ref {
         use super::super::OwningRef;
         use super::super::{RcRef, BoxRef, Erased, ErasedBoxRef};
+        #[cfg(feature = "std")]
         use std::cmp::{PartialEq, Ord, PartialOrd, Ordering};
+        #[cfg(not(feature = "std"))]
+        use core::cmp::{PartialEq, Ord, PartialOrd, Ordering};
+        #[cfg(feature = "std")]
         use std::hash::{Hash, Hasher};
+        #[cfg(not(feature = "std"))]
+        use core::hash::{Hash, Hasher};
+        use std::boxed::Box;
         use std::collections::hash_map::DefaultHasher;
         use std::collections::HashMap;
+        use std::format;
         use std::rc::Rc;
+        use std::string::{String, ToString};
+        use std::{vec, vec::Vec};
 
         #[derive(Debug, PartialEq)]
         struct Example(u32, String, [u8; 3]);
@@ -1425,7 +1471,9 @@ mod tests {
         fn raii_locks() {
             use super::super::{RefRef, RefMutRef};
             use std::cell::RefCell;
+            #[cfg(feature = "std")]
             use super::super::{MutexGuardRef, RwLockReadGuardRef, RwLockWriteGuardRef};
+            #[cfg(feature = "std")]
             use std::sync::{Mutex, RwLock};
 
             {
@@ -1448,6 +1496,7 @@ mod tests {
                 assert_eq!(*a, 1);
                 drop(a);
             }
+            #[cfg(feature = "std")]
             {
                 let a = Mutex::new(1);
                 let a = {
@@ -1458,6 +1507,7 @@ mod tests {
                 assert_eq!(*a, 1);
                 drop(a);
             }
+            #[cfg(feature = "std")]
             {
                 let a = RwLock::new(1);
                 let a = {
@@ -1468,6 +1518,7 @@ mod tests {
                 assert_eq!(*a, 1);
                 drop(a);
             }
+            #[cfg(feature = "std")]
             {
                 let a = RwLock::new(1);
                 let a = {
@@ -1717,10 +1768,14 @@ mod tests {
     mod owning_ref_mut {
         use super::super::{OwningRefMut, BoxRefMut, Erased, ErasedBoxRefMut};
         use super::super::BoxRef;
+        use std::boxed::Box;
         use std::cmp::{PartialEq, Ord, PartialOrd, Ordering};
-        use std::hash::{Hash, Hasher};
         use std::collections::hash_map::DefaultHasher;
         use std::collections::HashMap;
+        use std::format;
+        use std::hash::{Hash, Hasher};
+        use std::string::{String, ToString};
+        use std::{vec, vec::Vec};
 
         #[derive(Debug, PartialEq)]
         struct Example(u32, String, [u8; 3]);
@@ -1896,7 +1951,9 @@ mod tests {
         fn raii_locks() {
             use super::super::RefMutRefMut;
             use std::cell::RefCell;
+            #[cfg(feature = "std")]
             use super::super::{MutexGuardRefMut, RwLockWriteGuardRefMut};
+            #[cfg(feature = "std")]
             use std::sync::{Mutex, RwLock};
 
             {
@@ -1909,6 +1966,7 @@ mod tests {
                 assert_eq!(*a, 1);
                 drop(a);
             }
+            #[cfg(feature = "std")]
             {
                 let a = Mutex::new(1);
                 let a = {
@@ -1919,6 +1977,7 @@ mod tests {
                 assert_eq!(*a, 1);
                 drop(a);
             }
+            #[cfg(feature = "std")]
             {
                 let a = RwLock::new(1);
                 let a = {

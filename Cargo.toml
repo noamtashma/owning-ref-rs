@@ -13,5 +13,11 @@ keywords = ["reference", "sibling", "field", "owning"]
 [lib]
 name = "owning_ref"
 
-[dependencies]
-stable_deref_trait = "1.0.0"
+[features]
+default = ["std"]
+std = ["stable_deref_trait/std"]
+
+[dependencies.stable_deref_trait]
+version = "1.2.0"
+default-features = false
+features = ["alloc"]
