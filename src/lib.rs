@@ -247,6 +247,8 @@ fn main() {
 ```
 */
 
+extern crate maybe_dangling;
+use maybe_dangling::MaybeDangling;
 extern crate stable_deref_trait;
 pub use stable_deref_trait::{StableDeref as StableAddress, CloneStableDeref as CloneStableAddress};
 use std::marker::PhantomData;
@@ -261,7 +263,7 @@ use std::marker::PhantomData;
 ///
 /// For more details and examples, see the module and method docs.
 pub struct OwningRef<'t, O, T: ?Sized> {
-    owner: O,
+    owner: MaybeDangling<O>,
     reference: *const T,
     marker: PhantomData<&'t T>,
 }
@@ -276,7 +278,7 @@ pub struct OwningRef<'t, O, T: ?Sized> {
 ///
 /// For more details and examples, see the module and method docs.
 pub struct OwningRefMut<'t, O, T: ?Sized> {
-    owner: O,
+    owner: MaybeDangling<O>,
     reference: *mut T,
     marker: PhantomData<&'t T>,
 }
@@ -319,9 +321,10 @@ impl<'t, O, T: ?Sized> OwningRef<'t, O, T> {
         where O: StableAddress,
               O: Deref<Target = T>,
     {
+        let owner = MaybeDangling::new(o);
         OwningRef {
-            reference: &*o,
-            owner: o,
+            reference: &**owner,
+            owner,
             marker: PhantomData,
         }
     }
@@ -334,9 +337,10 @@ impl<'t, O, T: ?Sized> OwningRef<'t, O, T> {
     pub unsafe fn new_assert_stable_address(o: O) -> Self
         where O: Deref<Target = T>,
     {
+        let owner = MaybeDangling::new(o);
         OwningRef {
-            reference: &*o,
-            owner: o,
+            reference: &**owner,
+            owner,
             marker: PhantomData,
         }
     }
@@ -459,7 +463,6 @@ impl<'t, O, T: ?Sized> OwningRef<'t, O, T> {
     //     println!("{:?}", ow_ref);
     //     drop(box_i);
     // }
-    
 
     /// Old version of `try_map_with_owner`, now recognized as unsafe.
     #[deprecated(since = "0.5.0", note = "unsafe function: please use try_map_with_owner instead")]
@@ -520,7 +523,7 @@ impl<'t, O, T: ?Sized> OwningRef<'t, O, T> {
     {
         OwningRef {
             reference: self.reference,
-            owner: f(self.owner),
+            owner: MaybeDangling::new(f(MaybeDangling::into_inner(self.owner))),
             marker: PhantomData,
         }
     }
@@ -533,7 +536,7 @@ impl<'t, O, T: ?Sized> OwningRef<'t, O, T> {
     pub fn map_owner_box(self) -> OwningRef<'t, Box<O>, T> {
         OwningRef {
             reference: self.reference,
-            owner: Box::new(self.owner),
+            owner: MaybeDangling::new(Box::new(MaybeDangling::into_inner(self.owner))),
             marker: PhantomData,
         }
     }
@@ -575,7 +578,7 @@ impl<'t, O, T: ?Sized> OwningRef<'t, O, T> {
     {
         OwningRef {
             reference: self.reference,
-            owner: self.owner.into_erased(),
+            owner: MaybeDangling::new(MaybeDangling::into_inner(self.owner).into_erased()),
             marker: PhantomData,
         }
     }
@@ -589,7 +592,7 @@ impl<'t, O, T: ?Sized> OwningRef<'t, O, T> {
 
     /// Discards the reference and retrieves the owner.
     pub fn into_owner(self) -> O {
-        self.owner
+        MaybeDangling::into_inner(self.owner)
     }
 }
 
@@ -607,13 +610,14 @@ impl<'t, O, T: ?Sized> OwningRefMut<'t, O, T> {
     ///     assert_eq!(*owning_ref_mut, 42);
     /// }
     /// ```
-    pub fn new(mut o: O) -> Self
+    pub fn new(o: O) -> Self
         where O: StableAddress,
               O: DerefMut<Target = T>,
     {
+        let mut owner = MaybeDangling::new(o);
         OwningRefMut {
-            reference: &mut *o,
-            owner: o,
+            reference: &mut **owner,
+            owner,
             marker: PhantomData,
         }
     }
@@ -623,12 +627,13 @@ impl<'t, O, T: ?Sized> OwningRefMut<'t, O, T> {
     ///
     /// This is useful for cases where coherence rules prevents implementing the trait
     /// without adding a dependency to this crate in a third-party library.
-    pub unsafe fn new_assert_stable_address(mut o: O) -> Self
+    pub unsafe fn new_assert_stable_address(o: O) -> Self
         where O: DerefMut<Target = T>,
     {
+        let mut owner = MaybeDangling::new(o);
         OwningRefMut {
-            reference: &mut *o,
-            owner: o,
+            reference: &mut **owner,
+            owner,
             marker: PhantomData,
         }
     }
@@ -779,7 +784,7 @@ impl<'t, O, T: ?Sized> OwningRefMut<'t, O, T> {
     {
         OwningRefMut {
             reference: self.reference,
-            owner: f(self.owner),
+            owner: MaybeDangling::new(f(MaybeDangling::into_inner(self.owner))),
             marker: PhantomData,
         }
     }
@@ -792,7 +797,7 @@ impl<'t, O, T: ?Sized> OwningRefMut<'t, O, T> {
     pub fn map_owner_box(self) -> OwningRefMut<'t, Box<O>, T> {
         OwningRefMut {
             reference: self.reference,
-            owner: Box::new(self.owner),
+            owner: MaybeDangling::new(Box::new(MaybeDangling::into_inner(self.owner))),
             marker: PhantomData,
         }
     }
@@ -834,7 +839,7 @@ impl<'t, O, T: ?Sized> OwningRefMut<'t, O, T> {
     {
         OwningRefMut {
             reference: self.reference,
-            owner: self.owner.into_erased(),
+            owner: MaybeDangling::new(MaybeDangling::into_inner(self.owner).into_erased()),
             marker: PhantomData,
         }
     }
@@ -853,7 +858,7 @@ impl<'t, O, T: ?Sized> OwningRefMut<'t, O, T> {
 
     /// Discards the reference and retrieves the owner.
     pub fn into_owner(self) -> O {
-        self.owner
+        MaybeDangling::into_inner(self.owner)
     }
 }
 
@@ -2079,5 +2084,22 @@ mod tests {
             *d = 45;
             assert_eq!(*d, 45);
         }
+    }
+
+    /// This test threw an error under miri.  See https://github.com/noamtashma/owning-ref-rs/issues/3
+    #[test]
+    fn noalias_test() {
+        use super::OwningRef;
+        use std::cell::Cell;
+
+        fn helper(owning_ref: OwningRef<Box<Cell<u8>>, Cell<u8>>) -> u8 {
+            owning_ref.set(20);
+            owning_ref.as_owner().get() // should return 20
+        }
+
+        let val: Box<Cell<u8>> = Box::new(Cell::new(25));
+        let owning_ref = OwningRef::new(val);
+        let res = helper(owning_ref);
+        assert_eq!(res, 20);
     }
 }
