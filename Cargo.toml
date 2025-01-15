@@ -15,3 +15,4 @@ name = "owning_ref"
 
 [dependencies]
 stable_deref_trait = "1.0.0"
+maybe-dangling = "0.1.1"
