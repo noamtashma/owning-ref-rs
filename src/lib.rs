@@ -891,7 +891,7 @@ pub struct OwningHandle<O, H>
     where O: StableAddress, H: Deref,
 {
     handle: H,
-    _owner: O,
+    _owner: MaybeDangling<O>,
 }
 
 impl<O, H> Deref for OwningHandle<O, H>
@@ -965,10 +965,8 @@ impl<O, H> OwningHandle<O, H>
     pub fn new_with_fn<F>(o: O, f: F) -> Self
         where F: FnOnce(*const O::Target) -> H
     {
-        let h: H;
-        {
-            h = f(o.deref() as *const O::Target);
-        }
+        let o = MaybeDangling::new(o);
+        let h: H = f(&**o as *const O::Target);
 
         OwningHandle {
           handle: h,
@@ -983,10 +981,9 @@ impl<O, H> OwningHandle<O, H>
     pub fn try_new<F, E>(o: O, f: F) -> Result<Self, E>
         where F: FnOnce(*const O::Target) -> Result<H, E>
     {
-        let h: H;
-        {
-            h = f(o.deref() as *const O::Target)?;
-        }
+        
+        let o = MaybeDangling::new(o);
+        let h: H = f(&**o as *const O::Target)?;
 
         Ok(OwningHandle {
           handle: h,
@@ -1001,7 +998,7 @@ impl<O, H> OwningHandle<O, H>
 
     /// Discards the dependent object and returns the owner.
     pub fn into_owner(self) -> O {
-        self._owner
+        MaybeDangling::into_inner(self._owner)
     }
 }
 
