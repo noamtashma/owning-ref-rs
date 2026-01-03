@@ -1,0 +1,4 @@
+*.rs text eol=lf
+*.md test eol=lf
+*.toml text eol=lf
+.gitattributes text eol=lf

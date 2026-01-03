@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.5.1] - 2025-01-03
+`MaybeDangling` was added to help with [#3](https://github.com/noamtashma/owning-ref-rs/issues/3), though the issue is still not solved.
+
 ## [0.5.0] - 2023-10-12
 This crate has been forked and republished under the name `safer_owning_ref`.
 
