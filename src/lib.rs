@@ -1,5 +1,7 @@
 #![warn(missing_docs)]
 
+#![cfg_attr(not(feature = "std"), no_std)]
+
 /*!
 ## Note
 This crate has been republished because of popular demand to publish the fixed fork as a crate.
@@ -247,11 +249,15 @@ fn main() {
 ```
 */
 
+#[cfg(feature = "std")]
+extern crate core;
+
+extern crate alloc;
 extern crate maybe_dangling;
 use maybe_dangling::MaybeDangling;
 extern crate stable_deref_trait;
 pub use stable_deref_trait::{StableDeref as StableAddress, CloneStableDeref as CloneStableAddress};
-use std::marker::PhantomData;
+use core::marker::PhantomData;
 
 /// An owning reference.
 ///
@@ -866,7 +872,7 @@ impl<'t, O, T: ?Sized> OwningRefMut<'t, O, T> {
 // OwningHandle
 /////////////////////////////////////////////////////////////////////////////
 
-use std::ops::{Deref, DerefMut};
+use core::ops::{Deref, DerefMut};
 
 /// `OwningHandle` is a complement to `OwningRef`. Where `OwningRef` allows
 /// consumers to pass around an owned object and a dependent reference,
@@ -1006,12 +1012,12 @@ impl<O, H> OwningHandle<O, H>
 // std traits
 /////////////////////////////////////////////////////////////////////////////
 
-use std::convert::From;
-use std::fmt::{self, Debug};
-use std::marker::{Send, Sync};
-use std::cmp::{Eq, PartialEq, Ord, PartialOrd, Ordering};
-use std::hash::{Hash, Hasher};
-use std::borrow::{Borrow, BorrowMut};
+use core::convert::From;
+use core::fmt::{self, Debug};
+use core::marker::{Send, Sync};
+use core::cmp::{Eq, PartialEq, Ord, PartialOrd, Ordering};
+use core::hash::{Hash, Hasher};
+use core::borrow::{Borrow, BorrowMut};
 
 impl<'t, O, T: ?Sized> Deref for OwningRef<'t, O, T> {
     type Target = T;
@@ -1140,14 +1146,14 @@ unsafe impl<'t, O, T: ?Sized> CloneStableAddress for OwningRef<'t, O, T>
     where O: CloneStableAddress {}
 
 unsafe impl<'t, O, T: ?Sized> Send for OwningRef<'t, O, T>
-    where O: Send, for<'a> (&'a T): Send {}
+    where O: Send, for<'a> &'a T: Send {}
 unsafe impl<'t, O, T: ?Sized> Sync for OwningRef<'t, O, T>
-    where O: Sync, for<'a> (&'a T): Sync {}
+    where O: Sync, for<'a> &'a T: Sync {}
 
 unsafe impl<'t, O, T: ?Sized> Send for OwningRefMut<'t, O, T>
-    where O: Send, for<'a> (&'a mut T): Send {}
+    where O: Send, for<'a> &'a mut T: Send {}
 unsafe impl<'t, O, T: ?Sized> Sync for OwningRefMut<'t, O, T>
-    where O: Sync, for<'a> (&'a mut T): Sync {}
+    where O: Sync, for<'a> &'a mut T: Sync {}
 
 impl Debug for dyn Erased {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
@@ -1211,11 +1217,16 @@ impl<'t, O, T: ?Sized> Hash for OwningRefMut<'t, O, T> where T: Hash {
 // std types integration and convenience type defs
 /////////////////////////////////////////////////////////////////////////////
 
-use std::boxed::Box;
-use std::rc::Rc;
-use std::sync::Arc;
+use alloc::boxed::Box;
+use alloc::rc::Rc;
+use alloc::string::String;
+use alloc::sync::Arc;
+use alloc::vec::Vec;
+
+use core::cell::{Ref, RefCell, RefMut};
+
+#[cfg(feature = "std")]
 use std::sync::{MutexGuard, RwLockReadGuard, RwLockWriteGuard};
-use std::cell::{Ref, RefCell, RefMut};
 
 impl<T: 'static> ToHandle for RefCell<T> {
     type Handle = Ref<'static, T>;
@@ -1247,10 +1258,13 @@ pub type ArcRef<'u, T, U = T> = OwningRef<'u, Arc<T>, U>;
 pub type RefRef<'a, T, U = T> = OwningRef<'a, Ref<'a, T>, U>;
 /// Typedef of a owning reference that uses a `RefMut` as the owner.
 pub type RefMutRef<'a, T, U = T> = OwningRef<'a, RefMut<'a, T>, U>;
+#[cfg(feature = "std")]
 /// Typedef of a owning reference that uses a `MutexGuard` as the owner.
 pub type MutexGuardRef<'a, T, U = T> = OwningRef<'a, MutexGuard<'a, T>, U>;
+#[cfg(feature = "std")]
 /// Typedef of a owning reference that uses a `RwLockReadGuard` as the owner.
 pub type RwLockReadGuardRef<'a, T, U = T> = OwningRef<'a, RwLockReadGuard<'a, T>, U>;
+#[cfg(feature = "std")]
 /// Typedef of a owning reference that uses a `RwLockWriteGuard` as the owner.
 pub type RwLockWriteGuardRef<'a, T, U = T> = OwningRef<'a, RwLockWriteGuard<'a, T>, U>;
 
@@ -1263,8 +1277,10 @@ pub type StringRefMut<'u, > = OwningRefMut<'u, String, str>;
 
 /// Typedef of a mutable owning reference that uses a `RefMut` as the owner.
 pub type RefMutRefMut<'a, T, U = T> = OwningRefMut<'a, RefMut<'a, T>, U>;
+#[cfg(feature = "std")]
 /// Typedef of a mutable owning reference that uses a `MutexGuard` as the owner.
 pub type MutexGuardRefMut<'a, T, U = T> = OwningRefMut<'a, MutexGuard<'a, T>, U>;
+#[cfg(feature = "std")]
 /// Typedef of a mutable owning reference that uses a `RwLockWriteGuard` as the owner.
 pub type RwLockWriteGuardRefMut<'a, T, U = T> = OwningRefMut<'a, RwLockWriteGuard<'a, T>, U>;
 
@@ -1297,7 +1313,7 @@ pub type ErasedArcRef<'u, U> = OwningRef<'u, Arc<dyn Erased>, U>;
 /// Typedef of a mutable owning reference that uses an erased `Box` as the owner.
 pub type ErasedBoxRefMut<'u, U> = OwningRefMut<'u, Box<dyn Erased>, U>;
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 mod tests {
     mod owning_ref {
         use super::super::OwningRef;
